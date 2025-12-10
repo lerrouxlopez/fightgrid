@@ -1,9 +1,9 @@
 use eframe::egui;
-use egui::{Color32, FontId, Pos2, Rect, Stroke, Vec2};
+use egui::{Color32, FontId, Margin, Pos2, Rect, Stroke, Vec2};
 
 fn main() -> eframe::Result<()> {
     let native_options = eframe::NativeOptions {
-        initial_window_size: Some(Vec2::new(1280.0, 780.0)),
+        viewport: egui::ViewportBuilder::default().with_inner_size([1280.0, 780.0]),
         ..Default::default()
     };
 
@@ -65,7 +65,7 @@ impl eframe::App for FightGridApp {
                 ui.add_space(6.0);
                 egui::Frame::none()
                     .fill(Color32::from_rgb(26, 28, 32))
-                    .inner_margin(egui::style::Margin::symmetric(18.0, 12.0))
+                    .inner_margin(Margin::symmetric(18.0, 12.0))
                     .show(ui, |ui| {
                         ui.horizontal(|ui| {
                             let logo_size = 46.0;
@@ -280,11 +280,15 @@ fn draw_side(
 
 fn connect(painter: &egui::Painter, from: Rect, to: Rect, going_left: bool, stroke: Stroke) {
     let start = if going_left {
-        from.center_left()
+        Pos2::new(from.left(), from.center().y)
     } else {
-        from.center_right()
+        Pos2::new(from.right(), from.center().y)
     };
-    let end = if going_left { to.center_right() } else { to.center_left() };
+    let end = if going_left {
+        Pos2::new(to.right(), to.center().y)
+    } else {
+        Pos2::new(to.left(), to.center().y)
+    };
     let mid_x = (start.x + end.x) / 2.0;
     painter.line_segment([start, Pos2::new(mid_x, start.y)], stroke);
     painter.line_segment([Pos2::new(mid_x, start.y), Pos2::new(mid_x, end.y)], stroke);
