@@ -3,7 +3,10 @@ use egui::{Color32, FontId, Margin, Pos2, Rect, Stroke, Vec2};
 
 fn main() -> eframe::Result<()> {
     let native_options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default().with_inner_size([1280.0, 780.0]),
+        viewport: egui::ViewportBuilder::default()
+            .with_inner_size([1400.0, 880.0])
+            .with_fullscreen(true)
+            .with_resizable(false),
         ..Default::default()
     };
 
@@ -15,33 +18,34 @@ fn main() -> eframe::Result<()> {
 }
 
 struct FightGridApp {
-    left_seeds: Vec<&'static str>,
-    right_seeds: Vec<&'static str>,
+    nav_items: Vec<&'static str>,
+    active_nav: usize,
+    players: Vec<&'static str>,
     palette: Vec<Color32>,
 }
 
 impl FightGridApp {
     fn new(_cc: &eframe::CreationContext<'_>) -> Self {
         Self {
-            left_seeds: vec![
-                "Waking in the Snow",
-                "Twin Hype Back",
-                "Legend Has It",
-                "Down",
-                "Never Look Back",
-                "Early",
-                "Blockbuster Night, Pt. 2",
-                "Just",
-            ],
-            right_seeds: vec![
-                "Close Your Eyes",
-                "Don't Get Captured",
-                "See Logs",
-                "All Due Respect",
-                "Lie, Cheat, Steal",
-                "Report to the Shareholders",
-                "Crown",
-                "Oh My Darling Don't Cry",
+            nav_items: vec!["Home", "Leaderboard", "Players", "Reports", "Settings"],
+            active_nav: 0,
+            players: vec![
+                "Aida Santos",
+                "Ramon Cruz",
+                "Leah Navarro",
+                "Marco Dela Rosa",
+                "Tina Valdez",
+                "Gab Luna",
+                "Rico Manalo",
+                "Kara Abad",
+                "Lito Vergara",
+                "Nina Reyes",
+                "Jun Sarmiento",
+                "Mara Quinto",
+                "Elena Flores",
+                "Miguel Ibarra",
+                "Paolo Castillo",
+                "Sara Dominguez",
             ],
             palette: vec![
                 Color32::from_rgb(212, 64, 91),
@@ -123,12 +127,20 @@ impl eframe::App for FightGridApp {
                         .size(18.0),
                 );
                 ui.separator();
-                for item in ["Dashboard", "Brackets", "Fighters", "Events", "Settings"] {
+                for (idx, item) in self.nav_items.iter().enumerate() {
                     ui.add_space(6.0);
-                    ui.add_sized(
-                        Vec2::new(f32::INFINITY, 32.0),
-                        egui::SelectableLabel::new(item == "Brackets", item),
-                    );
+                    let selected = self.active_nav == idx;
+                    let text = egui::RichText::new(*item).color(Color32::WHITE);
+                    let mut frame = egui::Frame::none();
+                    if selected {
+                        frame = frame.fill(Color32::from_rgb(70, 80, 96));
+                    }
+                    frame.inner_margin(Margin::same(4.0)).show(ui, |ui| {
+                        let button = egui::SelectableLabel::new(selected, text);
+                        if ui.add_sized(Vec2::new(f32::INFINITY, 28.0), button).clicked() {
+                            self.active_nav = idx;
+                        }
+                    });
                 }
                 ui.add_space(12.0);
                 ui.separator();
@@ -145,46 +157,92 @@ impl eframe::App for FightGridApp {
         egui::CentralPanel::default()
             .frame(egui::Frame::none().fill(Color32::from_rgb(12, 14, 18)))
             .show(ctx, |ui| {
-                ui.add_space(10.0);
-                draw_bracket(ui, self);
-                ui.add_space(10.0);
-                ui.horizontal_centered(|ui| {
-                    for label in ["Add Match", "Shuffle", "Reset", "Advance"] {
-                        let btn = egui::Button::new(label).fill(Color32::from_rgb(30, 80, 70));
-                        ui.add(btn);
-                        ui.add_space(4.0);
+                let mid = self.players.len() / 2;
+                let left_seeds = &self.players[..mid];
+                let right_seeds = &self.players[mid..];
+
+                ui.add_space(6.0);
+                match self.active_nav {
+                    0 => {
+                        draw_bracket(ui, left_seeds, right_seeds, &self.palette);
+                        ui.add_space(10.0);
+                        ui.horizontal_centered(|ui| {
+                            for label in ["Seed", "Shuffle", "Reset", "Advance"] {
+                                let btn =
+                                    egui::Button::new(label).fill(Color32::from_rgb(48, 118, 96));
+                                ui.add(btn);
+                                ui.add_space(4.0);
+                            }
+                        });
                     }
-                });
+                    _ => {
+                        ui.vertical_centered(|ui| {
+                            ui.add_space(60.0);
+                            ui.label(
+                                egui::RichText::new("Coming soon...")
+                                    .size(24.0)
+                                    .color(Color32::from_rgb(160, 175, 192)),
+                            );
+                        });
+                    }
+                }
             });
     }
 }
 
-fn draw_bracket(ui: &mut egui::Ui, app: &FightGridApp) {
+fn draw_bracket(
+    ui: &mut egui::Ui,
+    left_seeds: &[&str],
+    right_seeds: &[&str],
+    palette: &[Color32],
+) {
     let available = ui.available_size();
-    let width = available.x.clamp(960.0, 1280.0);
-    let height = available.y.clamp(420.0, 620.0);
+    let width = available.x.max(1024.0);
+    let height = available.y.max(520.0);
     let (rect, _) = ui.allocate_exact_size(Vec2::new(width, height), egui::Sense::hover());
     let painter = ui.painter_at(rect);
 
     painter.rect_filled(rect, 10.0, Color32::from_rgb(18, 20, 24));
     painter.rect_stroke(rect, 10.0, Stroke::new(1.0, Color32::from_rgb(36, 40, 48)));
 
-    let slot = Vec2::new(160.0, 32.0);
-    let gap = 76.0;
-    let left_col1 = rect.left() + 32.0;
-    let left_col2 = left_col1 + slot.x + gap;
-    let left_col3 = left_col2 + slot.x + gap;
+    let slot = Vec2::new(170.0, 36.0);
+    let rounds_left = (left_seeds.len() as f32).log2().ceil() as usize;
+    let rounds_right = (right_seeds.len() as f32).log2().ceil() as usize;
+    let max_rounds = rounds_left.max(rounds_right).max(1);
 
-    let right_col1 = rect.right() - 32.0 - slot.x;
-    let right_col2 = right_col1 - slot.x - gap;
-    let right_col3 = right_col2 - slot.x - gap;
+    let half_space = rect.width() / 2.0 - 200.0;
+    let col_spacing = (half_space / max_rounds as f32).clamp(120.0, 220.0);
 
-    let start_y = rect.top() + 32.0;
-    let stroke = Stroke::new(1.4, Color32::from_rgb(92, 108, 128));
-    let left_final =
-        draw_side(&painter, &app.left_seeds, &app.palette, left_col1, left_col2, left_col3, start_y, slot, false, stroke);
-    let right_final =
-        draw_side(&painter, &app.right_seeds, &app.palette, right_col1, right_col2, right_col3, start_y, slot, true, stroke);
+    let left_cols: Vec<f32> = (0..rounds_left)
+        .map(|i| rect.left() + 32.0 + i as f32 * col_spacing)
+        .collect();
+    let right_cols: Vec<f32> = (0..rounds_right)
+        .map(|i| rect.right() - 32.0 - slot.x - i as f32 * col_spacing)
+        .collect();
+
+    let stroke = Stroke::new(1.4, Color32::from_rgb(110, 126, 150));
+    let start_y = rect.center().y;
+
+    let left_final = draw_side(
+        &painter,
+        left_seeds,
+        palette,
+        &left_cols,
+        start_y,
+        slot,
+        false,
+        stroke,
+    );
+    let right_final = draw_side(
+        &painter,
+        right_seeds,
+        palette,
+        &right_cols,
+        start_y,
+        slot,
+        true,
+        stroke,
+    );
 
     draw_center_finals(&painter, left_final, right_final, stroke);
 }
@@ -193,19 +251,21 @@ fn draw_side(
     painter: &egui::Painter,
     seeds: &[&str],
     palette: &[Color32],
-    col1_x: f32,
-    col2_x: f32,
-    col3_x: f32,
-    start_y: f32,
+    col_x: &[f32],
+    center_y: f32,
     slot: Vec2,
     going_left: bool,
     stroke: Stroke,
 ) -> Rect {
     let spacing = 16.0;
-    let mut round1 = Vec::new();
+    let total_height = seeds.len() as f32 * (slot.y + spacing) - spacing;
+    let mut rounds: Vec<Vec<Rect>> = Vec::new();
+
+    // Round 1
+    let mut round = Vec::new();
     for (i, name) in seeds.iter().enumerate() {
-        let y = start_y + i as f32 * (slot.y + spacing);
-        let rect = Rect::from_min_size(Pos2::new(col1_x, y), slot);
+        let y = center_y - total_height / 2.0 + i as f32 * (slot.y + spacing);
+        let rect = Rect::from_min_size(Pos2::new(col_x[0], y), slot);
         let color = palette[i % palette.len()];
         painter.rect_filled(rect, 6.0, color);
         painter.rect_stroke(rect, 6.0, stroke);
@@ -216,66 +276,41 @@ fn draw_side(
             FontId::proportional(13.0),
             Color32::WHITE,
         );
-        round1.push(rect);
+        round.push(rect);
+    }
+    rounds.push(round);
+
+    // Subsequent rounds
+    for r in 1..col_x.len() {
+        let prev = rounds.last().unwrap();
+        let mut next = Vec::new();
+        for pair in 0..(prev.len() / 2) {
+            let a = prev[pair * 2];
+            let b = prev[pair * 2 + 1];
+            let y = (a.center().y + b.center().y) / 2.0;
+            let rect = Rect::from_min_size(Pos2::new(col_x[r], y - slot.y / 2.0), slot);
+            painter.rect_filled(rect, 6.0, Color32::from_rgb(28 + (r as u8 * 4), 32, 42));
+            painter.rect_stroke(rect, 6.0, stroke);
+            painter.text(
+                Pos2::new(rect.left() + 8.0, rect.center().y),
+                egui::Align2::LEFT_CENTER,
+                if r + 1 == col_x.len() { "Finalist" } else { "Advancing" },
+                FontId::proportional(12.0),
+                Color32::from_rgb(200, 210, 230),
+            );
+            connect(painter, a, rect, going_left, stroke);
+            connect(painter, b, rect, going_left, stroke);
+            next.push(rect);
+        }
+        rounds.push(next);
     }
 
-    let mut round2 = Vec::new();
-    for pair in 0..4 {
-        let a = round1[pair * 2];
-        let b = round1[pair * 2 + 1];
-        let y = (a.center().y + b.center().y) / 2.0;
-        let rect = Rect::from_min_size(Pos2::new(col2_x, y - slot.y / 2.0), slot);
-        painter.rect_filled(rect, 6.0, Color32::from_rgb(28, 32, 38));
-        painter.rect_stroke(rect, 6.0, stroke);
-        painter.text(
-            Pos2::new(rect.left() + 8.0, rect.center().y),
-            egui::Align2::LEFT_CENTER,
-            "Advancing",
-            FontId::proportional(12.0),
-            Color32::from_rgb(185, 205, 225),
-        );
-        connect(painter, a, rect, going_left, stroke);
-        connect(painter, b, rect, going_left, stroke);
-        round2.push(rect);
-    }
-
-    let mut round3 = Vec::new();
-    for pair in 0..2 {
-        let a = round2[pair * 2];
-        let b = round2[pair * 2 + 1];
-        let y = (a.center().y + b.center().y) / 2.0;
-        let rect = Rect::from_min_size(Pos2::new(col3_x, y - slot.y / 2.0), slot);
-        painter.rect_filled(rect, 6.0, Color32::from_rgb(30, 36, 44));
-        painter.rect_stroke(rect, 6.0, stroke);
-        painter.text(
-            Pos2::new(rect.left() + 8.0, rect.center().y),
-            egui::Align2::LEFT_CENTER,
-            "Semi Finalist",
-            FontId::proportional(12.0),
-            Color32::from_rgb(200, 210, 230),
-        );
-        connect(painter, a, rect, going_left, stroke);
-        connect(painter, b, rect, going_left, stroke);
-        round3.push(rect);
-    }
-
-    let finals_rect = Rect::from_min_size(
-        Pos2::new(col3_x + if going_left { -slot.x - 12.0 } else { slot.x + 12.0 }, round3[0].center().y - slot.y / 2.0),
-        slot,
-    );
-    painter.rect_filled(finals_rect, 6.0, Color32::from_rgb(34, 40, 48));
-    painter.rect_stroke(finals_rect, 6.0, stroke);
-    painter.text(
-        Pos2::new(finals_rect.left() + 8.0, finals_rect.center().y),
-        egui::Align2::LEFT_CENTER,
-        "Finalist",
-        FontId::proportional(12.0),
-        Color32::from_rgb(225, 230, 235),
-    );
-    connect(painter, round3[0], finals_rect, going_left, stroke);
-    connect(painter, round3[1], finals_rect, going_left, stroke);
-
-    finals_rect
+    rounds.last().and_then(|v| v.first()).cloned().unwrap_or_else(|| {
+        Rect::from_min_size(
+            Pos2::new(col_x.last().copied().unwrap_or(0.0), center_y - slot.y / 2.0),
+            slot,
+        )
+    })
 }
 
 fn connect(painter: &egui::Painter, from: Rect, to: Rect, going_left: bool, stroke: Stroke) {
