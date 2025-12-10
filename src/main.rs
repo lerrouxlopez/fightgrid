@@ -16,11 +16,15 @@ fn main() -> eframe::Result<()> {
     )
 }
 
-struct FightGridApp;
+struct FightGridApp {
+    nav_items: Vec<&'static str>,
+}
 
 impl FightGridApp {
     fn new(_cc: &eframe::CreationContext<'_>) -> Self {
-        Self
+        Self {
+            nav_items: vec!["Home", "Leaderboard", "Players", "Reports", "Settings"],
+        }
     }
 }
 
@@ -78,6 +82,80 @@ impl eframe::App for FightGridApp {
 
         egui::CentralPanel::default()
             .frame(egui::Frame::none().fill(Color32::from_rgb(12, 14, 18)))
-            .show(ctx, |_ui| {});
+            .show(ctx, |ui| {
+                ui.add_space(12.0);
+                let available = ui.available_size();
+                let nav_width = (available.x / 3.0).max(200.0);
+                let main_width = (available.x - nav_width - 12.0).max(300.0);
+                let row_height = available.y - 12.0;
+
+                ui.horizontal(|ui| {
+                    ui.set_height(row_height);
+
+                    // Column 1: side navigation (1/3 width)
+                    ui.vertical(|ui| {
+                        ui.set_width(nav_width);
+                        egui::Frame::group(ui.style())
+                            .fill(Color32::from_rgb(24, 26, 32))
+                            .stroke(egui::Stroke::new(1.0, Color32::from_rgb(60, 70, 90)))
+                            .inner_margin(Margin::symmetric(12.0, 10.0))
+                            .show(ui, |ui| {
+                                ui.heading(
+                                    egui::RichText::new("Navigation")
+                                        .size(18.0)
+                                        .color(Color32::from_rgb(220, 225, 235)),
+                                );
+                                ui.separator();
+                                ui.add_space(6.0);
+                                for item in &self.nav_items {
+                                    ui.add_space(4.0);
+                                    let button = egui::Button::new(
+                                        egui::RichText::new(*item)
+                                            .size(14.0)
+                                            .color(Color32::WHITE),
+                                    )
+                                    .fill(Color32::from_rgb(40, 44, 52))
+                                    .stroke(egui::Stroke::new(
+                                        1.0,
+                                        Color32::from_rgb(80, 90, 110),
+                                    ))
+                                    .min_size(Vec2::new(nav_width - 24.0, 32.0));
+                                    ui.add(button);
+                                }
+                            });
+                    });
+
+                    ui.add_space(12.0);
+
+                    // Columns 2 + 3: main screen area
+                    ui.vertical(|ui| {
+                        ui.set_width(main_width);
+                        egui::Frame::group(ui.style())
+                            .fill(Color32::from_rgb(18, 18, 26))
+                            .stroke(egui::Stroke::new(1.0, Color32::from_rgb(70, 70, 90)))
+                            .inner_margin(Margin::symmetric(14.0, 12.0))
+                            .show(ui, |ui| {
+                                ui.heading(
+                                    egui::RichText::new("Main Screen")
+                                        .size(18.0)
+                                        .color(Color32::from_rgb(235, 235, 245)),
+                                );
+                                ui.separator();
+                                ui.add_space(8.0);
+                                ui.label(
+                                    egui::RichText::new(
+                                        "Grid layout: banner spans 3 columns; navigation uses column 1; this area spans columns 2 and 3.",
+                                    )
+                                    .color(Color32::from_rgb(190, 200, 215)),
+                                );
+                                ui.add_space(12.0);
+                                ui.label(
+                                    egui::RichText::new("Placeholder content for main screen.")
+                                        .color(Color32::from_rgb(150, 160, 180)),
+                                );
+                            });
+                    });
+                });
+            });
     }
 }
