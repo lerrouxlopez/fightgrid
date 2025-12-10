@@ -93,9 +93,9 @@ impl eframe::App for FightGridApp {
             )
             .show(ctx, |ui| {
                 let available = ui.available_size();
-                let gap = 12.0;
-                let nav_width = (available.x * 0.4).max(220.0); // 2/5 columns
-                let main_width = (available.x - nav_width - gap).max(320.0); // remaining 3/5 columns
+                let gap = 5.0;
+                let nav_width = (available.x * 0.2).max(180.0); // 1/5 columns
+                let main_width = (available.x - nav_width - gap).max(320.0); // remaining 4/5 columns
                 let row_height = available.y;
 
                 ui.horizontal(|ui| {
