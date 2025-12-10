@@ -81,13 +81,22 @@ impl eframe::App for FightGridApp {
             });
 
         egui::CentralPanel::default()
-            .frame(egui::Frame::none().fill(Color32::from_rgb(12, 14, 18)))
+            .frame(
+                egui::Frame::none()
+                    .fill(Color32::from_rgb(12, 14, 18))
+                    .inner_margin(Margin {
+                        left: 5.0,
+                        right: 5.0,
+                        top: 0.0,
+                        bottom: 5.0,
+                    }),
+            )
             .show(ctx, |ui| {
-                ui.add_space(12.0);
                 let available = ui.available_size();
-                let nav_width = (available.x / 3.0).max(200.0);
-                let main_width = (available.x - nav_width - 12.0).max(300.0);
-                let row_height = available.y - 12.0;
+                let gap = 12.0;
+                let nav_width = (available.x * 0.4).max(220.0); // 2/5 columns
+                let main_width = (available.x - nav_width - gap).max(320.0); // remaining 3/5 columns
+                let row_height = available.y;
 
                 ui.horizontal(|ui| {
                     ui.set_height(row_height);
