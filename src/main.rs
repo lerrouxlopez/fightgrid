@@ -5,7 +5,7 @@ fn main() -> eframe::Result<()> {
     let native_options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_inner_size([1400.0, 880.0])
-            .with_fullscreen(true)
+            .with_maximized(true)
             .with_resizable(false),
         ..Default::default()
     };
