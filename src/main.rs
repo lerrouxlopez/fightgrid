@@ -4,8 +4,7 @@ use egui::{Color32, FontId, Margin, Pos2, Rect, Stroke, Vec2};
 fn main() -> eframe::Result<()> {
     let native_options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
-            .with_inner_size([1400.0, 880.0])
-            .with_maximized(true)
+            .with_inner_size([1920.0, 1080.0])
             .with_resizable(false),
         ..Default::default()
     };
@@ -22,13 +21,10 @@ struct FightGridApp {
     active_nav: usize,
     players: Vec<&'static str>,
     palette: Vec<Color32>,
-    sent_maximize: bool,
 }
 
 impl FightGridApp {
-    fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        cc.egui_ctx
-            .send_viewport_cmd(egui::ViewportCommand::Maximized(true));
+    fn new(_cc: &eframe::CreationContext<'_>) -> Self {
         Self {
             nav_items: vec!["Home", "Leaderboard", "Players", "Reports", "Settings"],
             active_nav: 0,
@@ -60,18 +56,12 @@ impl FightGridApp {
                 Color32::from_rgb(101, 93, 194),
                 Color32::from_rgb(161, 78, 186),
             ],
-            sent_maximize: false,
         }
     }
 }
 
 impl eframe::App for FightGridApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        if !self.sent_maximize {
-            ctx.send_viewport_cmd(egui::ViewportCommand::Maximized(true));
-            self.sent_maximize = true;
-        }
-
         egui::TopBottomPanel::top("banner")
             .exact_height(78.0)
             .show(ctx, |ui| {
