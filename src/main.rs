@@ -26,7 +26,9 @@ struct FightGridApp {
 }
 
 impl FightGridApp {
-    fn new(_cc: &eframe::CreationContext<'_>) -> Self {
+    fn new(cc: &eframe::CreationContext<'_>) -> Self {
+        cc.egui_ctx
+            .send_viewport_cmd(egui::ViewportCommand::Maximized(true));
         Self {
             nav_items: vec!["Home", "Leaderboard", "Players", "Reports", "Settings"],
             active_nav: 0,
@@ -162,7 +164,11 @@ impl eframe::App for FightGridApp {
             });
 
         egui::CentralPanel::default()
-            .frame(egui::Frame::none().fill(Color32::from_rgb(12, 14, 18)))
+            .frame(
+                egui::Frame::none()
+                    .fill(Color32::from_rgb(10, 10, 14))
+                    .inner_margin(Margin::symmetric(12.0, 10.0)),
+            )
             .show(ctx, |ui| {
                 let mid = self.players.len() / 2;
                 let left_seeds = &self.players[..mid];
@@ -171,21 +177,31 @@ impl eframe::App for FightGridApp {
                 ui.add_space(6.0);
                 match self.active_nav {
                     0 => {
-                        ui.heading(
-                            egui::RichText::new("Bracket")
-                                .size(20.0)
-                                .color(Color32::from_rgb(220, 225, 235)),
-                        );
-                        ui.add_space(6.0);
-                        draw_bracket(ui, left_seeds, right_seeds, &self.palette);
-                        ui.add_space(10.0);
-                        ui.horizontal_centered(|ui| {
-                            for label in ["Seed", "Shuffle", "Reset", "Advance"] {
-                                let btn =
-                                    egui::Button::new(label).fill(Color32::from_rgb(48, 118, 96));
-                                ui.add(btn);
-                                ui.add_space(4.0);
-                            }
+                        ui.vertical(|ui| {
+                            ui.heading(
+                                egui::RichText::new("Bracket")
+                                    .size(20.0)
+                                    .color(Color32::from_rgb(240, 235, 245)),
+                            );
+                            ui.add_space(8.0);
+                            egui::Frame::group(ui.style())
+                                .fill(Color32::from_rgb(18, 16, 28))
+                                .stroke(Stroke::new(1.0, Color32::from_rgb(80, 70, 120)))
+                                .inner_margin(Margin::symmetric(12.0, 10.0))
+                                .show(ui, |ui| {
+                                    draw_bracket(ui, left_seeds, right_seeds, &self.palette);
+                                });
+                            ui.add_space(12.0);
+                            ui.horizontal_centered(|ui| {
+                                for label in ["Seed", "Shuffle", "Reset", "Advance"] {
+                                    let btn = egui::Button::new(label)
+                                        .fill(Color32::from_rgb(80, 24, 120))
+                                        .stroke(Stroke::new(1.0, Color32::from_rgb(255, 140, 210)))
+                                        .min_size(Vec2::new(110.0, 34.0));
+                                    ui.add(btn);
+                                    ui.add_space(6.0);
+                                }
+                            });
                         });
                     }
                     _ => {
@@ -210,13 +226,17 @@ fn draw_bracket(
     palette: &[Color32],
 ) {
     let available = ui.available_size();
-    let width = available.x.max(1024.0);
+    let width = available.x.max(900.0);
     let height = available.y.max(520.0);
     let (rect, _) = ui.allocate_exact_size(Vec2::new(width, height), egui::Sense::hover());
     let painter = ui.painter_at(rect);
 
-    painter.rect_filled(rect, 10.0, Color32::from_rgb(18, 20, 24));
-    painter.rect_stroke(rect, 10.0, Stroke::new(1.0, Color32::from_rgb(36, 40, 48)));
+    painter.rect_filled(rect, 10.0, Color32::from_rgb(24, 18, 38));
+    painter.rect_stroke(
+        rect,
+        10.0,
+        Stroke::new(1.0, Color32::from_rgb(255, 105, 180)),
+    );
 
     let slot = Vec2::new(170.0, 36.0);
     let rounds_left = (left_seeds.len() as f32).log2().ceil() as usize;
@@ -233,7 +253,7 @@ fn draw_bracket(
         .map(|i| rect.right() - 32.0 - slot.x - i as f32 * col_spacing)
         .collect();
 
-    let stroke = Stroke::new(1.4, Color32::from_rgb(110, 126, 150));
+    let stroke = Stroke::new(1.6, Color32::from_rgb(230, 210, 255));
     let start_y = rect.center().y;
 
     let left_final = draw_side(
@@ -280,8 +300,8 @@ fn draw_side(
         let y = center_y - total_height / 2.0 + i as f32 * (slot.y + spacing);
         let rect = Rect::from_min_size(Pos2::new(col_x[0], y), slot);
         let color = palette[i % palette.len()];
-        painter.rect_filled(rect, 6.0, color);
-        painter.rect_stroke(rect, 6.0, stroke);
+        painter.rect_filled(rect, 8.0, color);
+        painter.rect_stroke(rect, 8.0, Stroke::new(1.4, Color32::from_rgb(255, 230, 255)));
         painter.text(
             Pos2::new(rect.left() + 8.0, rect.center().y),
             egui::Align2::LEFT_CENTER,
@@ -302,8 +322,12 @@ fn draw_side(
             let b = prev[pair * 2 + 1];
             let y = (a.center().y + b.center().y) / 2.0;
             let rect = Rect::from_min_size(Pos2::new(col_x[r], y - slot.y / 2.0), slot);
-            painter.rect_filled(rect, 6.0, Color32::from_rgb(28 + (r as u8 * 4), 32, 42));
-            painter.rect_stroke(rect, 6.0, stroke);
+            painter.rect_filled(
+                rect,
+                8.0,
+                Color32::from_rgb(60 + (r as u8 * 18), 30, 90 + (r as u8 * 12)),
+            );
+            painter.rect_stroke(rect, 8.0, Stroke::new(1.4, Color32::from_rgb(240, 220, 255)));
             painter.text(
                 Pos2::new(rect.left() + 8.0, rect.center().y),
                 egui::Align2::LEFT_CENTER,
@@ -358,8 +382,8 @@ fn draw_center_finals(painter: &egui::Painter, left_final: Rect, right_final: Re
         final_slot,
     );
 
-    painter.rect_filled(left_final_box, 6.0, Color32::from_rgb(40, 46, 56));
-    painter.rect_stroke(left_final_box, 6.0, stroke);
+    painter.rect_filled(left_final_box, 8.0, Color32::from_rgb(90, 50, 160));
+    painter.rect_stroke(left_final_box, 8.0, Stroke::new(1.6, Color32::from_rgb(255, 200, 255)));
     painter.text(
         Pos2::new(left_final_box.left() + 8.0, left_final_box.center().y),
         egui::Align2::LEFT_CENTER,
@@ -367,8 +391,8 @@ fn draw_center_finals(painter: &egui::Painter, left_final: Rect, right_final: Re
         FontId::proportional(12.0),
         Color32::WHITE,
     );
-    painter.rect_filled(right_final_box, 6.0, Color32::from_rgb(40, 46, 56));
-    painter.rect_stroke(right_final_box, 6.0, stroke);
+    painter.rect_filled(right_final_box, 8.0, Color32::from_rgb(90, 50, 160));
+    painter.rect_stroke(right_final_box, 8.0, Stroke::new(1.6, Color32::from_rgb(255, 200, 255)));
     painter.text(
         Pos2::new(right_final_box.left() + 8.0, right_final_box.center().y),
         egui::Align2::LEFT_CENTER,
@@ -384,8 +408,12 @@ fn draw_center_finals(painter: &egui::Painter, left_final: Rect, right_final: Re
         Pos2::new(center_x - champ_slot.x / 2.0, mid_y + 64.0 - champ_slot.y / 2.0),
         champ_slot,
     );
-    painter.rect_filled(champ_box, 8.0, Color32::from_rgb(210, 120, 70));
-    painter.rect_stroke(champ_box, 8.0, Stroke::new(2.0, Color32::from_rgb(255, 222, 200)));
+    painter.rect_filled(champ_box, 10.0, Color32::from_rgb(250, 140, 70));
+    painter.rect_stroke(
+        champ_box,
+        10.0,
+        Stroke::new(2.0, Color32::from_rgb(255, 240, 200)),
+    );
     painter.text(
         champ_box.center(),
         egui::Align2::CENTER_CENTER,
