@@ -22,6 +22,7 @@ struct FightGridApp {
     active_nav: usize,
     players: Vec<&'static str>,
     palette: Vec<Color32>,
+    sent_maximize: bool,
 }
 
 impl FightGridApp {
@@ -57,12 +58,18 @@ impl FightGridApp {
                 Color32::from_rgb(101, 93, 194),
                 Color32::from_rgb(161, 78, 186),
             ],
+            sent_maximize: false,
         }
     }
 }
 
 impl eframe::App for FightGridApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        if !self.sent_maximize {
+            ctx.send_viewport_cmd(egui::ViewportCommand::Maximized(true));
+            self.sent_maximize = true;
+        }
+
         egui::TopBottomPanel::top("banner")
             .exact_height(78.0)
             .show(ctx, |ui| {
@@ -115,7 +122,7 @@ impl eframe::App for FightGridApp {
 
         egui::SidePanel::left("sidebar")
             .resizable(false)
-            .exact_width(210.0)
+            .exact_width(230.0)
             .show(ctx, |ui| {
                 ui.visuals_mut().widgets.inactive.bg_fill = Color32::from_rgb(30, 34, 40);
                 ui.visuals_mut().widgets.hovered.bg_fill = Color32::from_rgb(45, 50, 60);
@@ -136,7 +143,7 @@ impl eframe::App for FightGridApp {
                         frame = frame.fill(Color32::from_rgb(70, 80, 96));
                     }
                     frame.inner_margin(Margin::same(4.0)).show(ui, |ui| {
-                        let button = egui::SelectableLabel::new(selected, text);
+                        let button = egui::SelectableLabel::new(selected, text.clone());
                         if ui.add_sized(Vec2::new(f32::INFINITY, 28.0), button).clicked() {
                             self.active_nav = idx;
                         }
@@ -164,6 +171,12 @@ impl eframe::App for FightGridApp {
                 ui.add_space(6.0);
                 match self.active_nav {
                     0 => {
+                        ui.heading(
+                            egui::RichText::new("Bracket")
+                                .size(20.0)
+                                .color(Color32::from_rgb(220, 225, 235)),
+                        );
+                        ui.add_space(6.0);
                         draw_bracket(ui, left_seeds, right_seeds, &self.palette);
                         ui.add_space(10.0);
                         ui.horizontal_centered(|ui| {
