@@ -1,8 +1,27 @@
+use crate::controllers::{
+    EventInfo, LiveBlock, NavSection, ResultInfo, SettingsInfo, TeamInfo,
+};
 use eframe::egui;
 use egui::{Color32, FontId, Margin, Vec2};
 
-pub fn render(ctx: &egui::Context, nav_items: &[&str], seeds: &[String], palette: &[Color32]) {
+use super::{events, live, results, settings, teams};
+
+pub fn render(
+    ctx: &egui::Context,
+    nav_items: &[NavSection],
+    active_nav: NavSection,
+    palette: &[Color32],
+    seeds: &[String],
+    events_data: &[EventInfo],
+    teams_data: &[TeamInfo],
+    results_data: &[ResultInfo],
+    live_blocks: &[LiveBlock],
+    live_callouts: &str,
+    settings_info: &SettingsInfo,
+) -> Option<NavSection> {
     render_banner(ctx);
+
+    let mut selected_nav = None;
 
     egui::CentralPanel::default()
         .frame(
@@ -25,13 +44,28 @@ pub fn render(ctx: &egui::Context, nav_items: &[&str], seeds: &[String], palette
             ui.horizontal(|ui| {
                 ui.set_height(row_height);
 
-                render_navigation(ui, nav_items, nav_width, row_height);
+                selected_nav = render_navigation(ui, nav_items, nav_width, row_height, active_nav);
 
                 ui.add_space(gap);
 
-                render_bracket_container(ui, main_width, row_height, seeds, palette);
+                render_main_content(
+                    ui,
+                    main_width,
+                    row_height,
+                    seeds,
+                    palette,
+                    active_nav,
+                    events_data,
+                    teams_data,
+                    results_data,
+                    live_blocks,
+                    live_callouts,
+                    settings_info,
+                );
             });
         });
+
+    selected_nav
 }
 
 fn render_banner(ctx: &egui::Context) {
@@ -84,7 +118,14 @@ fn render_banner(ctx: &egui::Context) {
         });
 }
 
-fn render_navigation(ui: &mut egui::Ui, nav_items: &[&str], nav_width: f32, row_height: f32) {
+fn render_navigation(
+    ui: &mut egui::Ui,
+    nav_items: &[NavSection],
+    nav_width: f32,
+    row_height: f32,
+    active_nav: NavSection,
+) -> Option<NavSection> {
+    let mut selected = None;
     ui.vertical(|ui| {
         ui.set_width(nav_width);
         ui.set_min_height(row_height);
@@ -93,27 +134,67 @@ fn render_navigation(ui: &mut egui::Ui, nav_items: &[&str], nav_width: f32, row_
             .stroke(egui::Stroke::new(1.0, Color32::from_rgb(60, 70, 90)))
             .inner_margin(Margin::symmetric(12.0, 10.0))
             .show(ui, |ui| {
-                ui.heading(
-                    egui::RichText::new("Navigation")
-                        .size(18.0)
-                        .color(Color32::from_rgb(220, 225, 235)),
-                );
-                ui.separator();
                 ui.add_space(6.0);
                 for item in nav_items {
                     ui.add_space(4.0);
+                    let is_active = *item == active_nav;
                     let button = egui::Button::new(
-                        egui::RichText::new(*item)
+                        egui::RichText::new(item.label())
                             .size(14.0)
                             .color(Color32::WHITE),
                     )
-                    .fill(Color32::from_rgb(40, 44, 52))
-                    .stroke(egui::Stroke::new(1.0, Color32::from_rgb(80, 90, 110)))
+                    .fill(if is_active {
+                        Color32::from_rgb(64, 74, 94)
+                    } else {
+                        Color32::from_rgb(40, 44, 52)
+                    })
+                    .stroke(if is_active {
+                        egui::Stroke::new(1.4, Color32::from_rgb(160, 185, 255))
+                    } else {
+                        egui::Stroke::new(1.0, Color32::from_rgb(80, 90, 110))
+                    })
                     .min_size(Vec2::new(nav_width - 24.0, 32.0));
-                    ui.add(button);
+                    if ui.add(button).clicked() {
+                        selected = Some(*item);
+                    }
                 }
             });
     });
+    selected
+}
+
+fn render_main_content(
+    ui: &mut egui::Ui,
+    main_width: f32,
+    row_height: f32,
+    seeds: &[String],
+    palette: &[Color32],
+    active_nav: NavSection,
+    events_data: &[EventInfo],
+    teams_data: &[TeamInfo],
+    results_data: &[ResultInfo],
+    live_blocks: &[LiveBlock],
+    live_callouts: &str,
+    settings_info: &SettingsInfo,
+) {
+    match active_nav {
+        NavSection::Home => render_bracket_container(ui, main_width, row_height, seeds, palette),
+        NavSection::Events => {
+            events::render(ui, main_width, row_height, events_data);
+        }
+        NavSection::Teams => {
+            teams::render(ui, main_width, row_height, teams_data);
+        }
+        NavSection::Results => {
+            results::render(ui, main_width, row_height, results_data);
+        }
+        NavSection::Live => {
+            live::render(ui, main_width, row_height, live_blocks, live_callouts);
+        }
+        NavSection::Settings => {
+            settings::render(ui, main_width, row_height, settings_info);
+        }
+    };
 }
 
 fn render_bracket_container(

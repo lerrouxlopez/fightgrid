@@ -21,10 +21,32 @@ impl FightGridApp {
 impl eframe::App for FightGridApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         let nav_items = self.controller.nav_items();
-        let seeds = self.controller.seed_names();
+        let seeds = self.controller.home_seeds();
         let palette = self.controller.palette();
+        let active_nav = self.controller.active_nav();
 
-        views::dashboard::render(ctx, nav_items, &seeds, palette);
+        let events = self.controller.events();
+        let teams = self.controller.teams();
+        let results = self.controller.results();
+        let live_blocks = self.controller.live_blocks();
+        let live_callouts = self.controller.live_callouts();
+        let settings = self.controller.settings_info();
+
+        if let Some(selected) = views::home::render(
+            ctx,
+            nav_items,
+            active_nav,
+            palette,
+            &seeds,
+            events,
+            teams,
+            results,
+            live_blocks,
+            live_callouts,
+            settings,
+        ) {
+            self.controller.set_active_nav(selected);
+        }
     }
 }
 
