@@ -1,3 +1,4 @@
+#[derive(Clone, Copy, Debug)]
 pub struct ResultInfo {
     pub bout: &'static str,
     pub outcome: &'static str,

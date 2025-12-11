@@ -1,5 +1,5 @@
-use crate::repositories::PlayerRepository;
-use crate::services::{BracketService, PlayerService};
+use crate::repositories::{PlayerRepository, SqliteEventRepository};
+use crate::services::{BracketService, EventService, PlayerService};
 use crate::controllers::{
     EventsController, HomeController, LiveController, ResultsController, SettingsController,
     TeamsController,
@@ -35,8 +35,8 @@ pub struct AppController<R: PlayerRepository> {
     palette: Vec<Color32>,
     player_service: PlayerService<R>,
     bracket_service: BracketService,
+    events_controller: EventsController<SqliteEventRepository>,
     home_controller: HomeController,
-    events_controller: EventsController,
     teams_controller: TeamsController,
     results_controller: ResultsController,
     live_controller: LiveController,
@@ -45,6 +45,9 @@ pub struct AppController<R: PlayerRepository> {
 
 impl<R: PlayerRepository> AppController<R> {
     pub fn new(player_service: PlayerService<R>) -> Self {
+        let event_repo = SqliteEventRepository::new("fightgrid.db")
+            .expect("Failed to initialize event database");
+        let event_service = EventService::new(event_repo);
         Self {
             nav_items: vec![
                 NavSection::Home,
@@ -68,7 +71,7 @@ impl<R: PlayerRepository> AppController<R> {
             player_service,
             bracket_service: BracketService::new(),
             home_controller: HomeController::new(),
-            events_controller: EventsController::new(),
+            events_controller: EventsController::new(event_service),
             teams_controller: TeamsController::new(),
             results_controller: ResultsController::new(),
             live_controller: LiveController::new(),
@@ -97,8 +100,8 @@ impl<R: PlayerRepository> AppController<R> {
             .seeds(&self.player_service, &self.bracket_service)
     }
 
-    pub fn events(&self) -> &[crate::controllers::EventInfo] {
-        self.events_controller.events()
+    pub fn events_controller_mut(&mut self) -> &mut EventsController<SqliteEventRepository> {
+        &mut self.events_controller
     }
 
     pub fn teams(&self) -> &[crate::controllers::TeamInfo] {

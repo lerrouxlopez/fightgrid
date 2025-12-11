@@ -1,6 +1,7 @@
 use crate::controllers::{
-    EventInfo, LiveBlock, NavSection, ResultInfo, SettingsInfo, TeamInfo,
+    EventsController, LiveBlock, NavSection, ResultInfo, SettingsInfo, TeamInfo,
 };
+use crate::repositories::SqliteEventRepository;
 use eframe::egui;
 use egui::{Color32, FontId, Margin, Vec2};
 
@@ -12,7 +13,7 @@ pub fn render(
     active_nav: NavSection,
     palette: &[Color32],
     seeds: &[String],
-    events_data: &[EventInfo],
+    events_controller: &mut EventsController<SqliteEventRepository>,
     teams_data: &[TeamInfo],
     results_data: &[ResultInfo],
     live_blocks: &[LiveBlock],
@@ -49,13 +50,14 @@ pub fn render(
                 ui.add_space(gap);
 
                 render_main_content(
+                    ctx,
                     ui,
                     main_width,
                     row_height,
                     seeds,
                     palette,
                     active_nav,
-                    events_data,
+                    events_controller,
                     teams_data,
                     results_data,
                     live_blocks,
@@ -164,13 +166,14 @@ fn render_navigation(
 }
 
 fn render_main_content(
+    ctx: &egui::Context,
     ui: &mut egui::Ui,
     main_width: f32,
     row_height: f32,
     seeds: &[String],
     palette: &[Color32],
     active_nav: NavSection,
-    events_data: &[EventInfo],
+    events_controller: &mut EventsController<SqliteEventRepository>,
     teams_data: &[TeamInfo],
     results_data: &[ResultInfo],
     live_blocks: &[LiveBlock],
@@ -180,7 +183,7 @@ fn render_main_content(
     match active_nav {
         NavSection::Home => render_bracket_container(ui, main_width, row_height, seeds, palette),
         NavSection::Events => {
-            events::render(ui, main_width, row_height, events_data);
+            events::render(ctx, ui, main_width, row_height, events_controller);
         }
         NavSection::Teams => {
             teams::render(ui, main_width, row_height, teams_data);
@@ -234,13 +237,20 @@ fn draw_bracket(ui: &mut egui::Ui, seeds: &[String], palette: &[Color32]) {
     }
 
     let available = ui.available_size();
-    let slot = Vec2::new(150.0, 32.0);
-    let rounds = (seeds.len() as f32).log2().ceil() as usize;
+    let slot = Vec2::new(150.0, 37.0);
     let margin_x = 24.0;
     let width = available.x.max(640.0);
     let height = available.y.max(420.0);
     let (rect, _) = ui.allocate_exact_size(Vec2::new(width, height), egui::Sense::hover());
     let painter = ui.painter_at(rect);
+
+    // Compute matches per round (ceil pairing), so odd counts create a BYE match.
+    let mut matches_per_round = vec![(seeds.len() + 1) / 2];
+    while *matches_per_round.last().unwrap() > 1 {
+        let next = (matches_per_round.last().copied().unwrap() + 1) / 2;
+        matches_per_round.push(next);
+    }
+    let rounds = matches_per_round.len();
 
     let col_spacing = if rounds > 1 {
         (rect.width() - 2.0 * margin_x - slot.x) / (rounds as f32 - 1.0)
@@ -248,8 +258,29 @@ fn draw_bracket(ui: &mut egui::Ui, seeds: &[String], palette: &[Color32]) {
         rect.width() - 2.0 * margin_x - slot.x
     };
 
-    let matches_round0 = seeds.len() / 2;
-    let base_gap = 16.0;
+    // Round labels to mirror the provided pattern (Round 1 -> Semifinals -> Final/Champion).
+    for (idx, _) in matches_per_round.iter().enumerate() {
+        let x = rect.left() + margin_x + col_spacing * idx as f32 + slot.x * 0.5;
+        let label = if idx == 0 {
+            "Round 1"
+        } else if idx == rounds - 1 {
+            "Final"
+        } else if idx == rounds - 2 {
+            "Semifinals"
+        } else {
+            "Round"
+        };
+        painter.text(
+            egui::Pos2::new(x, rect.top() + 6.0),
+            egui::Align2::CENTER_TOP,
+            label,
+            egui::FontId::proportional(12.0),
+            Color32::from_rgb(200, 210, 230),
+        );
+    }
+
+    let matches_round0 = matches_per_round[0];
+    let base_gap = 26.0;
     let total_height =
         matches_round0 as f32 * slot.y + (matches_round0.saturating_sub(1) as f32) * base_gap;
     let start_y = rect.center().y - total_height / 2.0;
@@ -257,13 +288,22 @@ fn draw_bracket(ui: &mut egui::Ui, seeds: &[String], palette: &[Color32]) {
     let mut rounds_rects: Vec<Vec<egui::Rect>> = Vec::new();
     let mut round0 = Vec::new();
     for i in 0..matches_round0 {
+        let idx_a = i * 2;
+        let idx_b = idx_a + 1;
         let y = start_y + i as f32 * (slot.y + base_gap);
         let r = egui::Rect::from_min_size(egui::Pos2::new(rect.left() + margin_x, y), slot);
         let c = palette.get(i % palette.len()).copied().unwrap_or(Color32::GRAY);
         painter.rect_filled(r, 6.0, c);
         painter.rect_stroke(r, 6.0, egui::Stroke::new(1.2, Color32::from_rgb(55, 65, 90)));
-        let name = seeds.get(i * 2).map(|s| s.as_str()).unwrap_or("");
-        let name2 = seeds.get(i * 2 + 1).map(|s| s.as_str()).unwrap_or("");
+        painter.text(
+            egui::Pos2::new(r.center().x, r.top() - 2.0),
+            egui::Align2::CENTER_BOTTOM,
+            format!("Match {}", i + 1),
+            egui::FontId::proportional(11.0),
+            Color32::from_rgb(180, 190, 210),
+        );
+        let name = seeds.get(idx_a).map(|s| s.as_str()).unwrap_or("");
+        let name2 = seeds.get(idx_b).map(|s| s.as_str()).unwrap_or("BYE");
         painter.text(
             egui::Pos2::new(r.left() + 8.0, r.top() + 9.0),
             egui::Align2::LEFT_CENTER,
@@ -284,25 +324,40 @@ fn draw_bracket(ui: &mut egui::Ui, seeds: &[String], palette: &[Color32]) {
 
     for round_idx in 1..rounds {
         let prev = rounds_rects[round_idx - 1].clone();
-        let matches = prev.len() / 2;
+        let matches = matches_per_round[round_idx];
         let mut current = Vec::new();
         let x = rect.left() + margin_x + col_spacing * round_idx as f32;
         for m in 0..matches {
             let a = prev[m * 2];
-            let b = prev[m * 2 + 1];
-            let center_y = (a.center().y + b.center().y) / 2.0;
+            let b_opt = prev.get(m * 2 + 1).copied();
+            let center_y = if let Some(b) = b_opt {
+                (a.center().y + b.center().y) / 2.0
+            } else {
+                a.center().y
+            };
             let r = egui::Rect::from_center_size(egui::Pos2::new(x, center_y), slot);
             painter.rect_filled(r, 6.0, Color32::from_rgb(30, 32, 46));
             painter.rect_stroke(r, 6.0, egui::Stroke::new(1.2, Color32::from_rgb(95, 105, 130)));
+            let label = if b_opt.is_none() {
+                "Bye advance"
+            } else if round_idx + 1 == rounds {
+                "Final"
+            } else if round_idx + 2 == rounds {
+                "Semifinal"
+            } else {
+                "Advancing"
+            };
             painter.text(
                 r.center(),
                 egui::Align2::CENTER_CENTER,
-                if round_idx + 1 == rounds { "Final" } else { "Advancing" },
+                label,
                 egui::FontId::proportional(12.0),
                 Color32::from_rgb(220, 225, 235),
             );
             connect(&painter, a, r);
-            connect(&painter, b, r);
+            if let Some(b) = b_opt {
+                connect(&painter, b, r);
+            }
             current.push(r);
         }
         rounds_rects.push(current);

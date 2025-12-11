@@ -1,3 +1,4 @@
+#[derive(Clone, Copy, Debug)]
 pub struct SettingsInfo {
     pub organization: &'static str,
     pub automation: &'static [&'static str],

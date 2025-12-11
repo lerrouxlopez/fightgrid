@@ -20,30 +20,29 @@ impl FightGridApp {
 
 impl eframe::App for FightGridApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        let nav_items = self.controller.nav_items();
+        let nav_items = self.controller.nav_items().to_vec();
         let seeds = self.controller.home_seeds();
-        let palette = self.controller.palette();
+        let palette = self.controller.palette().to_vec();
         let active_nav = self.controller.active_nav();
 
-        let events = self.controller.events();
-        let teams = self.controller.teams();
-        let results = self.controller.results();
-        let live_blocks = self.controller.live_blocks();
-        let live_callouts = self.controller.live_callouts();
-        let settings = self.controller.settings_info();
+        let teams = self.controller.teams().to_vec();
+        let results = self.controller.results().to_vec();
+        let live_blocks = self.controller.live_blocks().to_vec();
+        let live_callouts = self.controller.live_callouts().to_string();
+        let settings = *self.controller.settings_info();
 
         if let Some(selected) = views::home::render(
             ctx,
-            nav_items,
+            &nav_items,
             active_nav,
-            palette,
+            &palette,
             &seeds,
-            events,
-            teams,
-            results,
-            live_blocks,
-            live_callouts,
-            settings,
+            self.controller.events_controller_mut(),
+            &teams,
+            &results,
+            &live_blocks,
+            &live_callouts,
+            &settings,
         ) {
             self.controller.set_active_nav(selected);
         }
@@ -68,6 +67,7 @@ fn default_players() -> Vec<crate::models::Player> {
         "Miguel Ibarra",
         "Paolo Castillo",
         "Sara Dominguez",
+        "Rodrigo Duterte",
     ]
     .into_iter()
     .map(|name| crate::models::Player {

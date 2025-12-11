@@ -1,3 +1,4 @@
+#[derive(Clone, Copy, Debug)]
 pub struct TeamInfo {
     pub name: &'static str,
     pub roster: &'static str,

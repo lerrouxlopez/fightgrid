@@ -1,3 +1,4 @@
+#[derive(Clone, Copy, Debug)]
 pub struct LiveBlock {
     pub title: &'static str,
     pub status: &'static str,
